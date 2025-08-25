@@ -10,6 +10,24 @@ import "font-awesome/css/font-awesome.min.css";
 
 import { stop_scan, start_scan } from "./assets/js/scan.js";
 
+try {
+  navigator.serviceWorker
+    .register(new URL("sw.js", import.meta.url), {
+      type: "module",
+    })
+    .then((registration) => {
+      if (registration.waiting) {
+        // There's a new service worker waiting to activate
+        // You can prompt the user to reload the page to apply the update
+        // For example: show a message to the user
+      } else {
+        // No waiting service worker, registration was successful
+      }
+    });
+} catch (e) {
+  console.log(e);
+}
+
 const scan_callback = (e) => {
   sessionStorage.setItem("filename", e);
   m.route.set("/photo");
@@ -83,6 +101,9 @@ let id = {
         class: "input",
         placeholder: "ID eingeben",
         value: id.value,
+        oncreate: (vnode) => {
+          vnode.dom.focus();
+        },
         oninput: (e) => (id.value = e.target.value),
       }),
       m(
@@ -100,6 +121,8 @@ let id = {
         "button",
         {
           class: "btn",
+          style: "margin:0 0 0 10px;",
+
           onclick: () => {
             sessionStorage.setItem("filename", id.value);
             m.route.set("/start");
@@ -113,22 +136,52 @@ let id = {
 
 var photo = {
   photoUrl: null,
+  photofilename: null,
   view: () =>
     m("div", [
+      m("div", "Wähle das Foto aus, welches zu der ID gehört."),
+
       m("input[type=file][accept=image/*][capture=environment]", {
         onchange: (e) => {
           let file = e.target.files[0];
           if (file) {
             photo.photoUrl = URL.createObjectURL(file);
-            let a = document.createElement("a");
-            a.href = photo.photoUrl;
-            a.download = sessionStorage.getItem("filename") + ".jpg";
-            a.click();
+            photo.photofilename = sessionStorage.getItem("filename") + ".jpg";
+            m.redraw(); // sofort neu rendern
           }
         },
       }),
+
       photo.photoUrl
-        ? m("img", { src: photo.photoUrl, style: "max-width:100%" })
+        ? m("div", { style: "margin-top:1em;" }, [
+            m("img", {
+              src: photo.photoUrl,
+              style:
+                "width:90%;border:2px solid blue;display:block;margin-bottom:0.5em;",
+            }),
+            m(
+              "span",
+              { style: "font-weight:bold;display:block;margin-bottom:1em;" },
+              photo.photofilename
+            ),
+
+            // Download-Button
+            m(
+              "button",
+              {
+                onclick: () => {
+                  let a = document.createElement("a");
+                  a.href = photo.photoUrl;
+                  a.download = photo.photofilename;
+                  a.click();
+                  m.route.set("/start");
+                },
+                style:
+                  "padding:0.5em 1em; background:blue; color:white; border:none; border-radius:5px;",
+              },
+              "Download"
+            ),
+          ])
         : null,
     ]),
 };
